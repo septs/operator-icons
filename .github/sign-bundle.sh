@@ -12,5 +12,6 @@ jarsigner \
 	-keystore "$KEYSTORE_FILE" \
 	-storepass "$KEYSTORE_PASSWORD" \
 	-keypass "$KEY_PASSWORD" \
+	-tsa http://timestamp.digicert.com \
 	bundle.zip \
 	"$KEY_ALIAS"
