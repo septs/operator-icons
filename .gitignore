@@ -1,2 +1,5 @@
+.venv
 .DS_Store
 admin-operators.json
+bundle.zip
+bundle.log
