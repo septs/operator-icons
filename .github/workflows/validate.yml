@@ -2,9 +2,6 @@ name: Validate operator icons
 
 on:
   pull_request:
-  push:
-    branches:
-      - master
 
 jobs:
   validate:
@@ -12,76 +9,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
-
+        uses: actions/checkout@v7
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
-
       - name: Validate catalogs and icons
-        run: |
-          python - <<'PY'
-          import pathlib
-          import sys
-          import tomllib
-
-          root = pathlib.Path(".")
-          icon_root = root / "icons"
-          catalog_root = root / "catalog"
-          png_signature = b"\x89PNG\r\n\x1a\n"
-          failures = []
-
-          icon_files = [p for p in icon_root.rglob("*") if p.is_file()]
-          png_files = []
-          for path in sorted(icon_files):
-              if path.suffix.lower() != ".png":
-                  failures.append(f"{path}: operator icon files must be .png")
-                  continue
-
-              data = path.read_bytes()
-              if len(data) < 33 or not data.startswith(png_signature):
-                  failures.append(f"{path}: not a valid PNG file")
-                  continue
-
-              width = int.from_bytes(data[16:20], "big")
-              height = int.from_bytes(data[20:24], "big")
-              if width != height:
-                  failures.append(f"{path}: icon must be square, got {width}x{height}")
-              if width < 256 or width > 1024:
-                  failures.append(f"{path}: width must be between 256 and 1024, got {width}")
-              if height < 256 or height > 1024:
-                  failures.append(f"{path}: height must be between 256 and 1024, got {height}")
-
-              png_files.append(path)
-
-          if not png_files:
-              failures.append("icons/: no PNG icon files found")
-
-          for catalog_path in sorted(catalog_root.glob("*.toml")):
-              try:
-                  data = tomllib.loads(catalog_path.read_text())
-              except Exception as error:
-                  failures.append(f"{catalog_path}: invalid TOML: {error}")
-                  continue
-
-              for operator in data.get("operators", []):
-                  entries = [operator, *operator.get("gids", [])]
-                  for entry in entries:
-                      icon = entry.get("icon")
-                      icon_scope = entry.get("icon_scope")
-                      if bool(icon) != bool(icon_scope):
-                          failures.append(f"{catalog_path}: icon and icon_scope must be set together")
-                          continue
-                      if not icon:
-                          continue
-                      target = icon_root / icon_scope / f"{icon}.png"
-                      if not target.exists():
-                          failures.append(f"{catalog_path}: missing referenced icon {target}")
-
-          if failures:
-              print("\n".join(failures), file=sys.stderr)
-              raise SystemExit(1)
-
-          print(f"Validated {len(png_files)} PNG icons and {len(list(catalog_root.glob('*.toml')))} catalog files.")
-          PY
+        run: .github/validate.py
